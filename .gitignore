@@ -28,3 +28,7 @@ models/openface/*.pkl
 celeb-classifier*
 
 site
+
+.idea
+sys
+os
