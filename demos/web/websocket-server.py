@@ -37,6 +37,7 @@ import os
 import StringIO
 import urllib
 import base64
+import pylibmc
 
 from sklearn.decomposition import PCA
 from sklearn.grid_search import GridSearchCV
@@ -72,7 +73,13 @@ args = parser.parse_args()
 align = openface.AlignDlib(args.dlibFacePredictor)
 net = openface.TorchNeuralNet(args.networkModel, imgDim=args.imgDim,
                               cuda=args.cuda)
+mc = pylibmc.Client(["127.0.0.1"], binary=True,
+                     behaviors={"tcp_nodelay": True,
+                                "ketama": True})
 
+mc.set("images", {})
+mc.set("people", [])
+mc.set("svm", None)
 
 class Face:
 
@@ -121,20 +128,26 @@ class OpenFaceServerProtocol(WebSocketServerProtocol):
             if not self.training:
                 self.trainSVM()
         elif msg['type'] == "ADD_PERSON":
-            self.people.append(msg['val'].encode('ascii', 'ignore'))
-            print(self.people)
+            people = mc.get('people')
+            people.append(msg['val'].encode('ascii', 'ignore'))
+            mc.set('people', people)
+            print(people)
         elif msg['type'] == "UPDATE_IDENTITY":
             h = msg['hash'].encode('ascii', 'ignore')
-            if h in self.images:
-                self.images[h].identity = msg['idx']
+            if h in mc.get('images'):
+                images = mc.get('images')
+                images[h].identity = msg['idx']
+                mc.set('images', images)
                 if not self.training:
                     self.trainSVM()
             else:
                 print("Image not found.")
         elif msg['type'] == "REMOVE_IMAGE":
             h = msg['hash'].encode('ascii', 'ignore')
-            if h in self.images:
-                del self.images[h]
+            if h in mc.get('images'):
+                images = mc.get('images')
+                del images[h]
+                mc.set('images', images)
                 if not self.training:
                     self.trainSVM()
             else:
@@ -152,11 +165,15 @@ class OpenFaceServerProtocol(WebSocketServerProtocol):
 
         for jsImage in jsImages:
             h = jsImage['hash'].encode('ascii', 'ignore')
-            self.images[h] = Face(np.array(jsImage['representation']),
+            images = mc.get('images')
+            images[h] = Face(np.array(jsImage['representation']),
                                   jsImage['identity'])
+            mc.set('images', images)
 
         for jsPerson in jsPeople:
-            self.people.append(jsPerson.encode('ascii', 'ignore'))
+            people = mc.get('people')
+            people.append(jsPerson.encode('ascii', 'ignore'))
+            mc.set('people', people)
 
         if not training:
             self.trainSVM()
@@ -164,7 +181,7 @@ class OpenFaceServerProtocol(WebSocketServerProtocol):
     def getData(self):
         X = []
         y = []
-        for img in self.images.values():
+        for img in mc.get('images').values():
             X.append(img.rep)
             y.append(img.identity)
 
@@ -222,10 +239,10 @@ class OpenFaceServerProtocol(WebSocketServerProtocol):
         self.sendMessage(json.dumps(msg))
 
     def trainSVM(self):
-        print("+ Training SVM on {} labeled images.".format(len(self.images)))
+        print("+ Training SVM on {} labeled images.".format(len(mc.get('images'))))
         d = self.getData()
         if d is None:
-            self.svm = None
+            mc.set('svm', None)
             return
         else:
             (X, y) = d
@@ -240,7 +257,7 @@ class OpenFaceServerProtocol(WebSocketServerProtocol):
                  'gamma': [0.001, 0.0001],
                  'kernel': ['rbf']}
             ]
-            self.svm = GridSearchCV(SVC(C=1), param_grid, cv=5).fit(X, y)
+            mc.set('svm', GridSearchCV(SVC(C=1), param_grid, cv=5).fit(X, y))
 
     def processFrame(self, dataURL, identity):
         head = "data:image/jpeg;base64,"
@@ -265,9 +282,10 @@ class OpenFaceServerProtocol(WebSocketServerProtocol):
         #     return
 
         identities = []
-        # bbs = align.getAllFaceBoundingBoxes(rgbFrame)
-        bb = align.getLargestFaceBoundingBox(rgbFrame)
-        bbs = [bb] if bb is not None else []
+        bbs = align.getAllFaceBoundingBoxes(rgbFrame)
+        bbs = bbs if len(bbs) > 0 else []
+        # bb = align.getLargestFaceBoundingBox(rgbFrame)
+        # bbs = bbs if bb is not None else []
         for bb in bbs:
             # print(len(bbs))
             landmarks = align.findLandmarks(rgbFrame, bb)
@@ -278,13 +296,15 @@ class OpenFaceServerProtocol(WebSocketServerProtocol):
                 continue
 
             phash = str(imagehash.phash(Image.fromarray(alignedFace)))
-            if phash in self.images:
-                identity = self.images[phash].identity
+            if phash in mc.get('images'):
+                identity = mc.get('images')[phash].identity
             else:
                 rep = net.forward(alignedFace)
                 # print(rep)
                 if self.training:
-                    self.images[phash] = Face(rep, identity)
+                    images = mc.get('images')
+                    images[phash] = Face(rep, identity)
+                    mc.set('images', images)
                     # TODO: Transferring as a string is suboptimal.
                     # content = [str(x) for x in cv2.resize(alignedFace, (0,0),
                     # fx=0.5, fy=0.5).flatten()]
@@ -298,12 +318,12 @@ class OpenFaceServerProtocol(WebSocketServerProtocol):
                     }
                     self.sendMessage(json.dumps(msg))
                 else:
-                    if len(self.people) == 0:
+                    if len(mc.get('people')) == 0:
                         identity = -1
-                    elif len(self.people) == 1:
+                    elif len(mc.get('people')) == 1:
                         identity = 0
-                    elif self.svm:
-                        identity = self.svm.predict(rep)[0]
+                    elif mc.get('svm'):
+                        identity = mc.get('svm').predict(rep)[0]
                     else:
                         print("hhh")
                         identity = -1
@@ -319,12 +339,12 @@ class OpenFaceServerProtocol(WebSocketServerProtocol):
                     cv2.circle(annotatedFrame, center=landmarks[p], radius=3,
                                color=(102, 204, 255), thickness=-1)
                 if identity == -1:
-                    if len(self.people) == 1:
-                        name = self.people[0]
+                    if len(mc.get('people')) == 1:
+                        name = mc.get('people')[0]
                     else:
                         name = "Unknown"
                 else:
-                    name = self.people[identity]
+                    name = mc.get('people')[identity]
                 cv2.putText(annotatedFrame, name, (bb.left(), bb.top() - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.75,
                             color=(152, 255, 204), thickness=2)
