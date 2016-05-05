@@ -37,6 +37,7 @@ import os
 import StringIO
 import urllib
 import base64
+import pylibmc
 
 from sklearn.decomposition import PCA
 from sklearn.grid_search import GridSearchCV
@@ -73,6 +74,13 @@ align = openface.AlignDlib(args.dlibFacePredictor)
 net = openface.TorchNeuralNet(args.networkModel, imgDim=args.imgDim,
                               cuda=args.cuda)
 
+mc = pylibmc.Client(["127.0.0.1"], binary=True,
+                     behaviors={"tcp_nodelay": True,
+                                "ketama": True})
+
+mc.set("images", {})
+mc.set("people", [])
+mc.set("svm", None)
 
 class Face:
 
@@ -90,10 +98,10 @@ class Face:
 class OpenFaceServerProtocol(WebSocketServerProtocol):
 
     def __init__(self):
-        self.images = {}
+        self.images = mc.get('images')
         self.training = True
-        self.people = []
-        self.svm = None
+        self.people = mc.get('people')
+        self.svm = mc.get('svm')
         if args.unknown:
             self.unknownImgs = np.load("./examples/web/unknown.npy")
 
@@ -105,6 +113,8 @@ class OpenFaceServerProtocol(WebSocketServerProtocol):
         print("WebSocket connection open.")
 
     def onMessage(self, payload, isBinary):
+        self.images = mc.get('images')
+        self.people = mc.get('people')
         raw = payload.decode('utf8')
         msg = json.loads(raw)
         print("Received {} message of length {}.".format(
@@ -122,11 +132,20 @@ class OpenFaceServerProtocol(WebSocketServerProtocol):
                 self.trainSVM()
         elif msg['type'] == "ADD_PERSON":
             self.people.append(msg['val'].encode('ascii', 'ignore'))
+            mc.set('people', self.people)
             print(self.people)
+        elif msg['type'] == "GET_NEW_ID":
+            msg = {
+                "type": "NEW_ID",
+                "count": len(self.people)
+            }
+            self.sendMessage(json.dumps(msg))
+
         elif msg['type'] == "UPDATE_IDENTITY":
             h = msg['hash'].encode('ascii', 'ignore')
             if h in self.images:
                 self.images[h].identity = msg['idx']
+                mc.set('images', self.images)
                 if not self.training:
                     self.trainSVM()
             else:
@@ -135,6 +154,7 @@ class OpenFaceServerProtocol(WebSocketServerProtocol):
             h = msg['hash'].encode('ascii', 'ignore')
             if h in self.images:
                 del self.images[h]
+                mc.set('images', self.images)
                 if not self.training:
                     self.trainSVM()
             else:
@@ -148,20 +168,25 @@ class OpenFaceServerProtocol(WebSocketServerProtocol):
         print("WebSocket connection closed: {0}".format(reason))
 
     def loadState(self, jsImages, training, jsPeople):
+        self.images = mc.get('images')
+        self.people = mc.get('people')
         self.training = training
 
         for jsImage in jsImages:
             h = jsImage['hash'].encode('ascii', 'ignore')
             self.images[h] = Face(np.array(jsImage['representation']),
                                   jsImage['identity'])
+        mc.set('images', self.images)
 
         for jsPerson in jsPeople:
             self.people.append(jsPerson.encode('ascii', 'ignore'))
+        mc.set('people', self.people)
 
         if not training:
             self.trainSVM()
 
     def getData(self):
+        self.images = mc.get('images')
         X = []
         y = []
         for img in self.images.values():
@@ -222,10 +247,12 @@ class OpenFaceServerProtocol(WebSocketServerProtocol):
         self.sendMessage(json.dumps(msg))
 
     def trainSVM(self):
+        self.images = mc.get('images')
         print("+ Training SVM on {} labeled images.".format(len(self.images)))
         d = self.getData()
         if d is None:
             self.svm = None
+            mc.set('svm', self.svm)
             return
         else:
             (X, y) = d
@@ -241,8 +268,12 @@ class OpenFaceServerProtocol(WebSocketServerProtocol):
                  'kernel': ['rbf']}
             ]
             self.svm = GridSearchCV(SVC(C=1), param_grid, cv=5).fit(X, y)
+            mc.set('svm', self.svm)
 
     def processFrame(self, dataURL, identity):
+        self.images = mc.get('images')
+        self.people = mc.get('people')
+        self.svm = mc.get('svm')
         head = "data:image/jpeg;base64,"
         assert(dataURL.startswith(head))
         imgdata = base64.b64decode(dataURL[len(head):])
@@ -329,6 +360,8 @@ class OpenFaceServerProtocol(WebSocketServerProtocol):
                 cv2.putText(annotatedFrame, name, (bb.left(), bb.top() - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.75,
                             color=(152, 255, 204), thickness=2)
+
+        mc.set('images', self.images)
 
         if not self.training:
             msg = {

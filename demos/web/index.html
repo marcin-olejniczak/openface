@@ -113,7 +113,7 @@ limitations under the License.
                         <li><a href="javascript:defaultPerson=-1">Unknown</a></li>
                         {{#each people}}
                         <li>
-                            <a href="javascript:defaultPerson={{@index}}">
+                            <a href="javascript:defaultPerson={{@key}}">
                                 {{this}}
                             </a>
                         </li>
@@ -164,11 +164,11 @@ limitations under the License.
                             <td>
                                 <input type='radio'
                                        name='ppl_radio_{{../this.hash}}'
-                                       value="{{@index}}"
-                                       {{#ifEq ../identity @index}}
+                                       value="{{@key}}"
+                                       {{#ifEq ../identity @key}}
                                        checked
                                        {{/ifEq}}
-                                       onClick="updateIdentity('{{../this.hash}}', {{@index}})"
+                                       onClick="updateIdentity('{{../this.hash}}', {{@key}})"
                                        >
                             </td>
                             {{/each}}
@@ -208,7 +208,7 @@ limitations under the License.
          peopleTableTmpl = Handlebars.compile($("#peopleTableTmpl").html());
      var defaultTok = 1, defaultNumNulls = 20;
      var tok = defaultTok,
-         people = [], defaultPerson = -1,
+         people = {}, defaultPerson = -1,
          images = [],
          training = false;
      var numNulls, sentTimes, receivedTimes;
@@ -227,7 +227,7 @@ limitations under the License.
      }
 
      $("#serverBtn.btn-group > .btn").click(changeServerCallback);
-     $("#addPersonBtn").click(addPersonCallback);
+     $("#addPersonBtn").click(getNewId);
      $("#addPersonTxt").pressEnter(addPersonCallback);
      $("#trainingChk").change(trainingChkCallback);
      $("#viewTSNEBtn").click(viewTSNECallback);

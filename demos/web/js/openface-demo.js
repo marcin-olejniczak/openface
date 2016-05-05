@@ -41,7 +41,7 @@ $.fn.pressEnter = function(fn) {
 function registerHbarsHelpers() {
     // http://stackoverflow.com/questions/8853396
     Handlebars.registerHelper('ifEq', function(v1, v2, options) {
-        if(v1 === v2) {
+        if(v1 == v2) {
             return options.fn(this);
         }
         return options.inverse(this);
@@ -78,9 +78,8 @@ function sendFrameLoop() {
 
 function getPeopleInfoHtml() {
     var info = {'-1': 0};
-    var len = people.length;
-    for (var i = 0; i < len; i++) {
-        info[i] = 0;
+    for (var key in people) {
+        info[key] = 0;
     }
 
     var len = images.length;
@@ -90,9 +89,8 @@ function getPeopleInfoHtml() {
     }
 
     var h = "<li><b>Unknown:</b> "+info['-1']+"</li>";
-    var len = people.length;
-    for (var i = 0; i < len; i++) {
-        h += "<li><b>"+people[i]+":</b> "+info[i]+"</li>";
+    for (var key in people) {
+        h += "<li><b>"+people[key]+":</b> "+info[key]+"</li>";
     }
     return h;
 }
@@ -180,6 +178,9 @@ function createSocket(address, name) {
             }
         } else if (j.type == "PROCESSED") {
             tok++;
+        } else if (j.type == "NEW_ID") {
+            defaultPerson = j.count;
+            addPersonCallback();
         } else if (j.type == "NEW_IMAGE") {
             images.push({
                 hash: j.hash,
@@ -241,11 +242,21 @@ function umSuccess(stream) {
     sendFrameLoop();
 }
 
-function addPersonCallback(el) {
-    defaultPerson = people.length;
+function getNewId(){
     var newPerson = $("#addPersonTxt").val();
     if (newPerson == "") return;
-    people.push(newPerson);
+    if (socket != null) {
+        var msg = {
+            'type': 'GET_NEW_ID'
+        };
+        socket.send(JSON.stringify(msg));
+    }
+}
+
+function addPersonCallback(el) {
+    var newPerson = $("#addPersonTxt").val();
+    if (newPerson == "") return;
+    people[defaultPerson] = newPerson;
     $("#addPersonTxt").val("");
 
     if (socket != null) {
