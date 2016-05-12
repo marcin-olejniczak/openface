@@ -202,38 +202,13 @@ limitations under the License.
          makeTabActive($(this).attr('data-tab'));
 	   });
 
-     var vid = document.getElementById('videoel'),
-         vidReady = false;
+     var site = "index";
      var defaultPersonTmpl = Handlebars.compile($("#defaultPersonTmpl").html()),
          peopleTableTmpl = Handlebars.compile($("#peopleTableTmpl").html());
-     var defaultTok = 1, defaultNumNulls = 20;
-     var tok = defaultTok,
-         people = {}, defaultPerson = -1,
-         images = [],
-         training = false;
-     var numNulls, sentTimes, receivedTimes;
-     var socket, socketName;
 
-     $("#trainingChk").bootstrapToggle('off');
      $("#peopleInVideo").html("");
 
-     if (navigator.getUserMedia) {
-         var videoSelector = {video : true};
-         navigator.getUserMedia(videoSelector, umSuccess, function() {
-             alert("Error fetching video from webcam");
-         });
-     } else {
-         alert("No webcam detected.");
-     }
-
      $("#serverBtn.btn-group > .btn").click(changeServerCallback);
-     $("#addPersonBtn").click(getNewId);
-     $("#addPersonTxt").pressEnter(addPersonCallback);
-     $("#trainingChk").change(trainingChkCallback);
      $("#viewTSNEBtn").click(viewTSNECallback);
-
-     redrawPeople();
-     // createSocket("ws://facerec.cmusatyalab.org:9000", "CMU");
-     createSocket("ws:" + window.location.hostname + ":9000", "Local");
     </script>
 </html>

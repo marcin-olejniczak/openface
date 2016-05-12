@@ -72,7 +72,13 @@ function sendFrameLoop() {
         socket.send(JSON.stringify(msg));
         tok--;
     }
-    setTimeout(function() {requestAnimFrame(sendFrameLoop)}, 250);
+    if (site != 'person') {
+        setTimeout(function() {requestAnimFrame(sendFrameLoop)}, 250);
+    } else {
+        if ($("#trainingChk").prop('checked') ){
+            setTimeout(function() {requestAnimFrame(sendFrameLoop)}, 250);
+        }
+    }
 }
 
 
@@ -87,22 +93,35 @@ function getPeopleInfoHtml() {
         id = images[i].identity;
         info[id] += 1;
     }
-
-    var h = "<li><b>Unknown:</b> "+info['-1']+"</li>";
+    if (site == 'person') {
+        var valueMax = $('#progress_bar div').attr('aria-valuemax')
+        $('#progress_bar div').width((info[defaultPerson]/valueMax*100)+'%');
+        $('#progress_bar span').text(info[defaultPerson]+'/'+valueMax);
+        if (info[defaultPerson] >= valueMax) {
+            $("#trainingChk").bootstrapToggle('off');
+            $("#addPersonTxt").parent().show();
+        }
+        var h = "";
+    } else {
+        var h = "<li><b>Unknown:</b> "+info['-1']+"</li>";
+    }
     for (var key in people) {
         h += "<li><b>"+people[key]+":</b> "+info[key]+"</li>";
     }
-    return h;
+
+    $("#peopleInfo").html(h);
 }
 
 function redrawPeople() {
-    var context = {people: people, images: images};
-    $("#peopleTable").html(peopleTableTmpl(context));
+    if (site != 'person') {
+        var context = {people: people, images: images};
+        $("#peopleTable").html(peopleTableTmpl(context));
 
-    var context = {people: people};
-    $("#defaultPersonDropdown").html(defaultPersonTmpl(context));
+        var context = {people: people};
+        $("#defaultPersonDropdown").html(defaultPersonTmpl(context));
+    }
 
-    $("#peopleInfo").html(getPeopleInfoHtml());
+    getPeopleInfoHtml();
 }
 
 function getDataURLFromRGB(rgb) {
@@ -266,22 +285,30 @@ function addPersonCallback(el) {
         };
         socket.send(JSON.stringify(msg));
     }
+    if (site == 'person') {
+        $("#trainingChk").bootstrapToggle('on');
+        $("#addPersonTxt").parent().hide();
+    }
     redrawPeople();
 }
 
 function trainingChkCallback() {
     training = $("#trainingChk").prop('checked');
-    if (training) {
-        makeTabActive("tab-preview");
-    } else {
-        makeTabActive("tab-annotated");
-    }
     if (socket != null) {
         var msg = {
             'type': 'TRAINING',
             'val': training
         };
         socket.send(JSON.stringify(msg));
+    }
+    if (site == 'person') {
+        sendFrameLoop();
+    } else {
+        if (training) {
+            makeTabActive("tab-preview");
+        } else {
+            makeTabActive("tab-annotated");
+        }
     }
 }
 
@@ -361,3 +388,33 @@ function changeServerCallback() {
         alert("Unrecognized server: " + $(this.html()));
     }
 }
+
+var vid = document.getElementById('videoel'),
+    vidReady = false;
+var defaultTok = 1, defaultNumNulls = 20;
+var tok = defaultTok,
+    people = {}, defaultPerson = -1,
+    images = [],
+    training = false;
+var numNulls, sentTimes, receivedTimes;
+var socket, socketName;
+
+$(document).ready(function() {
+
+    $("#trainingChk").bootstrapToggle('off');
+    if (navigator.getUserMedia) {
+        var videoSelector = {video: true};
+        navigator.getUserMedia(videoSelector, umSuccess, function () {
+            alert("Error fetching video from webcam");
+        });
+    } else {
+        alert("No webcam detected.");
+    }
+    $("#addPersonBtn").click(getNewId);
+    $("#addPersonTxt").pressEnter(getNewId);
+
+    $("#trainingChk").change(trainingChkCallback);
+
+    redrawPeople();
+    createSocket("ws:" + window.location.hostname + ":9000", "Local");
+});

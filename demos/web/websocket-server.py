@@ -283,7 +283,7 @@ class OpenFaceServerProtocol(WebSocketServerProtocol):
         img = Image.open(imgF)
 
         buf = np.fliplr(np.asarray(img))
-        rgbFrame = np.zeros((300, 400, 3), dtype=np.uint8)
+        rgbFrame = np.zeros((buf.shape[0], buf.shape[1], 3), dtype=np.uint8)
         rgbFrame[:, :, 0] = buf[:, :, 2]
         rgbFrame[:, :, 1] = buf[:, :, 1]
         rgbFrame[:, :, 2] = buf[:, :, 0]
