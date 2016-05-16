@@ -37,7 +37,7 @@ host and the Docker container.
 ```
 docker pull bamos/openface
 docker run -p 9000:9000 -p 8000:8000 -t -i bamos/openface /bin/bash
-cd /root/src/openface
+cd /root/openface
 ./demos/compare.py images/examples/{lennon*,clapton*}
 ./demos/classifier.py infer models/openface/celeb-classifier.nn4.small2.v1.pkl ./images/examples/carell.jpg
 ./demos/web/start-servers.sh
@@ -53,7 +53,7 @@ Run the following commands from the `openface` directory.
 ```
 docker build -t openface .
 docker run -p 9000:9000 -p 8000:8000 -t -i openface /bin/bash
-cd /root/src/openface
+cd /root/openface
 ./run-tests.sh
 ./demos/compare.py images/examples/{lennon*,clapton*}
 ./demos/classifier.py infer models/openface/celeb-classifier.nn4.small2.v1.pkl ./images/examples/carell.jpg
@@ -153,6 +153,8 @@ where `$NAME` is as listed below.
   (only with CUDA)
 + [fblualib](https://github.com/facebook/fblualib)
   (only for [training a DNN](http://cmusatyalab.github.io/openface/training-new-models/))
++ [tds](https://github.com/torch/tds)
+  (only for [training a DNN](http://cmusatyalab.github.io/openface/training-new-models/))
 + [torchx](https://github.com/nicholas-leonard/torchx)
   (only for [training a DNN](http://cmusatyalab.github.io/openface/training-new-models/))
 + [optnet](https://github.com/fmassa/optimize-net)
@@ -161,7 +163,7 @@ where `$NAME` is as listed below.
 These can all be installed with:
 
 ```
-for NAME in dpnn nn optim optnet csvigo cutorch cunn fblualib torchx; do luarocks install $NAME; done
+for NAME in dpnn nn optim optnet csvigo cutorch cunn fblualib torchx tds; do luarocks install $NAME; done
 ```
 
 ### OpenFace
