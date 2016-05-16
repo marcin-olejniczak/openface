@@ -389,6 +389,16 @@ function changeServerCallback() {
     }
 }
 
+function setCameraId() {
+    cameraId = $("#setCameraIdTxt").val();
+    var msg = {
+        'type': 'CAMERA_ID',
+        'cameraId': cameraId
+    }
+    socket.send(JSON.stringify(msg));
+    $(".setCameraIdDiv").text("Camera ID: "+ cameraId)
+}
+
 var vid = document.getElementById('videoel'),
     vidReady = false;
 var defaultTok = 1, defaultNumNulls = 20;
@@ -414,6 +424,9 @@ $(document).ready(function() {
     $("#addPersonTxt").pressEnter(getNewId);
 
     $("#trainingChk").change(trainingChkCallback);
+
+    $("#setCameraIdBtn").click(setCameraId);
+    $("#setCameraIdTxt").pressEnter(setCameraId);
 
     redrawPeople();
     createSocket("ws:" + window.location.hostname + ":9000", "Local");

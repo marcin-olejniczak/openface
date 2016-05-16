@@ -38,6 +38,7 @@ import StringIO
 import urllib
 import base64
 import pylibmc
+import datetime, time
 
 from sklearn.decomposition import PCA
 from sklearn.grid_search import GridSearchCV
@@ -81,6 +82,7 @@ mc = pylibmc.Client(["127.0.0.1"], binary=True,
 mc.set("images", {})
 mc.set("people", [])
 mc.set("svm", None)
+# mc.flush_all()
 
 class Face:
 
@@ -98,6 +100,7 @@ class Face:
 class OpenFaceServerProtocol(WebSocketServerProtocol):
 
     def __init__(self):
+        self.cameraId = None;
         self.images = mc.get('images')
         self.training = True
         self.people = mc.get('people')
@@ -140,7 +143,6 @@ class OpenFaceServerProtocol(WebSocketServerProtocol):
                 "count": len(self.people)
             }
             self.sendMessage(json.dumps(msg))
-
         elif msg['type'] == "UPDATE_IDENTITY":
             h = msg['hash'].encode('ascii', 'ignore')
             if h in self.images:
@@ -161,6 +163,23 @@ class OpenFaceServerProtocol(WebSocketServerProtocol):
                 print("Image not found.")
         elif msg['type'] == 'REQ_TSNE':
             self.sendTSNE(msg['people'])
+        elif msg['type'] == 'CAMERA_ID':
+            self.cameraId = msg['cameraId']
+        elif msg['type'] == "GET_PREVIEW_FRAME":
+            previewData = mc.get(msg['cameraId'])
+            if previewData:
+                msg = {
+                    "type": "PREVIEW_FRAME",
+                    "names": previewData["names"],
+                    "previewFrame": previewData["previewFrame"],
+                    "lastUpdated": previewData["lastUpdated"]
+                }
+                self.sendMessage(json.dumps(msg))
+            else:
+                msg = {
+                    "type": "NONE_CAMERA"
+                }
+                self.sendMessage(json.dumps(msg))
         else:
             print("Warning: Unknown message type: {}".format(msg['type']))
 
@@ -364,6 +383,7 @@ class OpenFaceServerProtocol(WebSocketServerProtocol):
         mc.set('images', self.images)
 
         if not self.training:
+
             msg = {
                 "type": "IDENTITIES",
                 "identities": identities
@@ -384,6 +404,18 @@ class OpenFaceServerProtocol(WebSocketServerProtocol):
                 "type": "ANNOTATED",
                 "content": content
             }
+
+            if self.cameraId:
+                identitiesNames = []
+                for key in identities:
+                    if key != -1:
+                        identitiesNames.append(self.people[key])
+
+                previewData = {"names": identitiesNames}
+                previewData["previewFrame"] = content
+                previewData["lastUpdated"] = time.mktime(datetime.datetime.now().timetuple())
+                mc.set(self.cameraId, previewData)
+
             plt.close()
             self.sendMessage(json.dumps(msg))
 

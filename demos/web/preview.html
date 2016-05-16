@@ -10,39 +10,26 @@
         <link href="vendor/css/bootstrap-dialog.min.css" rel="stylesheet">
         <link href="css/main.css" rel="stylesheet">
     </head>
-    <body class="person">
+    <body class="preview">
         <div class="container">
             <div class="header">
-                <div id='tab-preview'>
-                    <video id="videoel" width="400" height="300"
-                           preload="auto" loop></video>
+                <div id='tab-annotated' class='tab-content current'>
+                    <div id="detectedFaces"></div>
                 </div>
-                <!--<progress id="progress_bar" value="0" max="20">2/50</progress>-->
-                <div class="progress" id="progress_bar">
-                    <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="20">
-                        <span>0/20</span>
-                    </div>
-                </div>
+                <ul id="peopleList"></ul>
             </div>
-
-            <div class="content center">
+            <div class="content">
                 Servers: <span id="serverStatus"></span>
 
-                <h2 class="hidden">Training
-                    <input type="checkbox" checked data-toggle="toggle"
-                           id="trainingChk">
-                </h2>
-                <div class="input-group addPersonDiv">
-                    <input type="text" class="form-control" id="addPersonTxt">
+                <div class="input-group setCameraIdDiv">
+                    <input type="text" class="form-control" id="setCameraIdTxt" placeholder="Enter the camera ID">
                     <span class="input-group-btn">
                         <button class="btn btn-default" type="button"
-                                id="addPersonBtn">
-                            Add Person
+                                id="setCameraIdBtn">
+                            Set camera ID
                         </button>
                     </span>
                 </div>
-
-                <ul id="peopleInfo"></ul>
             </div>
         </div>
     </body>
@@ -53,8 +40,8 @@
     <script src="vendor/js/handlebars.min.js"></script>
     <script src="vendor/js/jstat.min.js"></script>
     <script src="js/utils.js"></script>
-    <script src="js/openface-demo.js"></script>
+    <script src="js/openface-demo-preview.js"></script>
     <script type="text/javascript">
-        var site = 'person';
+        var site = 'preview';
     </script>
 </html>

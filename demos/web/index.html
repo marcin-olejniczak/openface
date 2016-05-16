@@ -46,6 +46,16 @@ limitations under the License.
                 <div id='tab-annotated' class='tab-content current'>
                     <div id="detectedFaces"></div>
                 </div>
+
+                <div class="input-group setCameraIdDiv">
+                    <input type="text" class="form-control" id="setCameraIdTxt">
+                    <span class="input-group-btn">
+                        <button class="btn btn-default" type="button"
+                                id="setCameraIdBtn">
+                            Set camera ID
+                        </button>
+                    </span>
+                </div>
             </div>
             <div class="content">
                 <h2>People in Video</h2>
@@ -210,5 +220,7 @@ limitations under the License.
 
      $("#serverBtn.btn-group > .btn").click(changeServerCallback);
      $("#viewTSNEBtn").click(viewTSNECallback);
+
+
     </script>
 </html>
