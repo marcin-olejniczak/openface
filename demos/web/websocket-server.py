@@ -319,6 +319,20 @@ class OpenFaceServerProtocol(WebSocketServerProtocol):
         bbs = bbs if len(bbs) > 0 else []
         # bb = align.getLargestFaceBoundingBox(rgbFrame)
         # bbs = bbs if bb is not None else []
+
+        debug_path = "../../debug/"
+        training_path = debug_path+"training/"
+        detect_path = debug_path+"detect/"
+
+        if self.training:
+            training_path += self.people[identity]+"/"
+            if not os.path.exists(training_path):
+                os.makedirs(training_path)
+            face_number = len([name for name in os.listdir(training_path) if os.path.isfile(os.path.join(training_path, name))])
+        else:
+            detect_path += str(len([name_f for name_f in os.listdir(training_path)]) + 1)+"/"
+            if not os.path.exists(detect_path):
+                os.makedirs(detect_path)
         for bb in bbs:
             # print(len(bbs))
             landmarks = align.findLandmarks(rgbFrame, bb)
@@ -354,7 +368,9 @@ class OpenFaceServerProtocol(WebSocketServerProtocol):
                     elif len(self.people) == 1:
                         identity = 0
                     elif self.svm:
-                        identity = self.svm.predict(rep)[0]
+                        tmp = self.svm.predict(rep)
+                        # identity = self.svm.predict(rep)[0]
+                        identity = tmp[0]
                     else:
                         print("hhh")
                         identity = -1
@@ -379,6 +395,10 @@ class OpenFaceServerProtocol(WebSocketServerProtocol):
                 cv2.putText(annotatedFrame, name, (bb.left(), bb.top() - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.75,
                             color=(152, 255, 204), thickness=2)
+                if len(self.people) >= 2:
+                    cv2.imwrite(detect_path+name+str("") + ".pgm", alignedFace)
+            else:
+                cv2.imwrite(training_path+str(face_number + 1) + ".pgm", alignedFace)
 
         mc.set('images', self.images)
 
