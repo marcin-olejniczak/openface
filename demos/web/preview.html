@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Face Recognition</title>
+        <link href="vendor/css/bootstrap.min.css" rel="stylesheet">
+        <link href="vendor/css/bootstrap-toggle.min.css" rel="stylesheet">
+        <link href="vendor/css/bootstrap-dialog.min.css" rel="stylesheet">
+        <link href="css/main.css" rel="stylesheet">
+    </head>
+    <body class="preview">
+        <div class="container">
+            <div class="header">
+                <div id='tab-annotated' class='tab-content current'>
+                    <div id="detectedFaces"></div>
+                </div>
+                <ul id="peopleList"></ul>
+            </div>
+            <div class="content">
+                Servers: <span id="serverStatus"></span>
+
+                <div class="input-group setCameraIdDiv">
+                    <input type="text" class="form-control" id="setCameraIdTxt" placeholder="Enter the camera ID">
+                    <span class="input-group-btn">
+                        <button class="btn btn-default" type="button"
+                                id="setCameraIdBtn">
+                            Set camera ID
+                        </button>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </body>
+    <script src="vendor/js/jquery.min.js"></script>
+    <script src="vendor/js/bootstrap.min.js"></script>
+    <script src="vendor/js/bootstrap-toggle.min.js"></script>
+    <script src="vendor/js/bootstrap-dialog.min.js"></script>
+    <script src="vendor/js/handlebars.min.js"></script>
+    <script src="vendor/js/jstat.min.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/openface-demo-preview.js"></script>
+    <script type="text/javascript">
+        var site = 'preview';
+    </script>
+</html>

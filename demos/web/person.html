@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Face Recognition</title>
+        <link href="vendor/css/bootstrap.min.css" rel="stylesheet">
+        <link href="vendor/css/bootstrap-toggle.min.css" rel="stylesheet">
+        <link href="vendor/css/bootstrap-dialog.min.css" rel="stylesheet">
+        <link href="css/main.css" rel="stylesheet">
+    </head>
+    <body class="person">
+        <div class="container">
+            <div class="header">
+                <div id='tab-preview'>
+                    <video id="videoel" width="400" height="300"
+                           preload="auto" loop></video>
+                </div>
+                <!--<progress id="progress_bar" value="0" max="20">2/50</progress>-->
+                <div class="progress" id="progress_bar">
+                    <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="20">
+                        <span>0/20</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content center">
+                Servers: <span id="serverStatus"></span>
+
+                <h2 class="hidden">Training
+                    <input type="checkbox" checked data-toggle="toggle"
+                           id="trainingChk">
+                </h2>
+                <div class="input-group addPersonDiv">
+                    <input type="text" class="form-control" id="addPersonTxt">
+                    <span class="input-group-btn">
+                        <button class="btn btn-default" type="button"
+                                id="addPersonBtn">
+                            Add Person
+                        </button>
+                    </span>
+                </div>
+
+                <ul id="peopleInfo"></ul>
+            </div>
+        </div>
+    </body>
+    <script src="vendor/js/jquery.min.js"></script>
+    <script src="vendor/js/bootstrap.min.js"></script>
+    <script src="vendor/js/bootstrap-toggle.min.js"></script>
+    <script src="vendor/js/bootstrap-dialog.min.js"></script>
+    <script src="vendor/js/handlebars.min.js"></script>
+    <script src="vendor/js/jstat.min.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/openface-demo.js"></script>
+    <script type="text/javascript">
+        var site = 'person';
+    </script>
+</html>

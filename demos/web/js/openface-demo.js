@@ -41,7 +41,7 @@ $.fn.pressEnter = function(fn) {
 function registerHbarsHelpers() {
     // http://stackoverflow.com/questions/8853396
     Handlebars.registerHelper('ifEq', function(v1, v2, options) {
-        if(v1 === v2) {
+        if(v1 == v2) {
             return options.fn(this);
         }
         return options.inverse(this);
@@ -72,15 +72,20 @@ function sendFrameLoop() {
         socket.send(JSON.stringify(msg));
         tok--;
     }
-    setTimeout(function() {requestAnimFrame(sendFrameLoop)}, 250);
+    if (site != 'person') {
+        setTimeout(function() {requestAnimFrame(sendFrameLoop)}, 250);
+    } else {
+        if ($("#trainingChk").prop('checked') ){
+            setTimeout(function() {requestAnimFrame(sendFrameLoop)}, 250);
+        }
+    }
 }
 
 
 function getPeopleInfoHtml() {
     var info = {'-1': 0};
-    var len = people.length;
-    for (var i = 0; i < len; i++) {
-        info[i] = 0;
+    for (var key in people) {
+        info[key] = 0;
     }
 
     var len = images.length;
@@ -88,23 +93,35 @@ function getPeopleInfoHtml() {
         id = images[i].identity;
         info[id] += 1;
     }
-
-    var h = "<li><b>Unknown:</b> "+info['-1']+"</li>";
-    var len = people.length;
-    for (var i = 0; i < len; i++) {
-        h += "<li><b>"+people[i]+":</b> "+info[i]+"</li>";
+    if (site == 'person') {
+        var valueMax = $('#progress_bar div').attr('aria-valuemax')
+        $('#progress_bar div').width((info[defaultPerson]/valueMax*100)+'%');
+        $('#progress_bar span').text(info[defaultPerson]+'/'+valueMax);
+        if (info[defaultPerson] >= valueMax) {
+            $("#trainingChk").bootstrapToggle('off');
+            $("#addPersonTxt").parent().show();
+        }
+        var h = "";
+    } else {
+        var h = "<li><b>Unknown:</b> "+info['-1']+"</li>";
     }
-    return h;
+    for (var key in people) {
+        h += "<li><b>"+people[key]+":</b> "+info[key]+"</li>";
+    }
+
+    $("#peopleInfo").html(h);
 }
 
 function redrawPeople() {
-    var context = {people: people, images: images};
-    $("#peopleTable").html(peopleTableTmpl(context));
+    if (site != 'person') {
+        var context = {people: people, images: images};
+        $("#peopleTable").html(peopleTableTmpl(context));
 
-    var context = {people: people};
-    $("#defaultPersonDropdown").html(defaultPersonTmpl(context));
+        var context = {people: people};
+        $("#defaultPersonDropdown").html(defaultPersonTmpl(context));
+    }
 
-    $("#peopleInfo").html(getPeopleInfoHtml());
+    getPeopleInfoHtml();
 }
 
 function getDataURLFromRGB(rgb) {
@@ -180,6 +197,9 @@ function createSocket(address, name) {
             }
         } else if (j.type == "PROCESSED") {
             tok++;
+        } else if (j.type == "NEW_ID") {
+            defaultPerson = j.count;
+            addPersonCallback();
         } else if (j.type == "NEW_IMAGE") {
             images.push({
                 hash: j.hash,
@@ -241,11 +261,21 @@ function umSuccess(stream) {
     sendFrameLoop();
 }
 
-function addPersonCallback(el) {
-    defaultPerson = people.length;
+function getNewId(){
     var newPerson = $("#addPersonTxt").val();
     if (newPerson == "") return;
-    people.push(newPerson);
+    if (socket != null) {
+        var msg = {
+            'type': 'GET_NEW_ID'
+        };
+        socket.send(JSON.stringify(msg));
+    }
+}
+
+function addPersonCallback(el) {
+    var newPerson = $("#addPersonTxt").val();
+    if (newPerson == "") return;
+    people[defaultPerson] = newPerson;
     $("#addPersonTxt").val("");
 
     if (socket != null) {
@@ -255,22 +285,30 @@ function addPersonCallback(el) {
         };
         socket.send(JSON.stringify(msg));
     }
+    if (site == 'person') {
+        $("#trainingChk").bootstrapToggle('on');
+        $("#addPersonTxt").parent().hide();
+    }
     redrawPeople();
 }
 
 function trainingChkCallback() {
     training = $("#trainingChk").prop('checked');
-    if (training) {
-        makeTabActive("tab-preview");
-    } else {
-        makeTabActive("tab-annotated");
-    }
     if (socket != null) {
         var msg = {
             'type': 'TRAINING',
             'val': training
         };
         socket.send(JSON.stringify(msg));
+    }
+    if (site == 'person') {
+        sendFrameLoop();
+    } else {
+        if (training) {
+            makeTabActive("tab-preview");
+        } else {
+            makeTabActive("tab-annotated");
+        }
     }
 }
 
@@ -350,3 +388,46 @@ function changeServerCallback() {
         alert("Unrecognized server: " + $(this.html()));
     }
 }
+
+function setCameraId() {
+    cameraId = $("#setCameraIdTxt").val();
+    var msg = {
+        'type': 'CAMERA_ID',
+        'cameraId': cameraId
+    }
+    socket.send(JSON.stringify(msg));
+    $(".setCameraIdDiv").text("Camera ID: "+ cameraId)
+}
+
+var vid = document.getElementById('videoel'),
+    vidReady = false;
+var defaultTok = 1, defaultNumNulls = 20;
+var tok = defaultTok,
+    people = {}, defaultPerson = -1,
+    images = [],
+    training = false;
+var numNulls, sentTimes, receivedTimes;
+var socket, socketName;
+
+$(document).ready(function() {
+
+    $("#trainingChk").bootstrapToggle('off');
+    if (navigator.getUserMedia) {
+        var videoSelector = {video: true};
+        navigator.getUserMedia(videoSelector, umSuccess, function () {
+            alert("Error fetching video from webcam");
+        });
+    } else {
+        alert("No webcam detected.");
+    }
+    $("#addPersonBtn").click(getNewId);
+    $("#addPersonTxt").pressEnter(getNewId);
+
+    $("#trainingChk").change(trainingChkCallback);
+
+    $("#setCameraIdBtn").click(setCameraId);
+    $("#setCameraIdTxt").pressEnter(setCameraId);
+
+    redrawPeople();
+    createSocket("ws:" + window.location.hostname + ":9000", "Local");
+});

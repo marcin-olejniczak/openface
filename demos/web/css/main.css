@@ -13,7 +13,7 @@ body {
     filter : fliph; /*IE*/
 }
 
-h1, .h1, h2, .h2, h3, .h3, {
+h1, .h1, h2, .h2, h3, .h3 {
   margin-top: 0;
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-weight: normal;
@@ -37,7 +37,7 @@ img {
 
 .container .header {
     text-align: center;
-    top: 0;
+    top: 0px;
     bottom: 330px;
     position: absolute;
     right: 0;
@@ -46,12 +46,16 @@ img {
     margin-right: auto;
     margin-bottom: 10px;
     width: 80%;
-    height: 310px;
+    height: 397px;
     /* overflow-y: scroll; */
 }
 
+.person .container .header, .preview .container .header {
+    top: 60px;
+}
+
 .container .content {
-    top: 350px;
+    top: 410px;
     bottom: 0;
     position: absolute;
     right: 0;
@@ -59,7 +63,37 @@ img {
     margin: auto;
     width: 80%;
     height: auto;
-    overflow-y: scroll;
+    overflow-y: auto;
+}
+
+.container .content.center{
+    width: 195px;
+    text-align: center;
+}
+
+.preview .container .content{
+    top: 45px;
+    text-align: center;
+    width: 430px;
+}
+
+#peopleList {
+    width: 200px;
+    position: absolute;
+    top: 60px;
+    left: -24px;
+    text-align: left;
+}
+
+.setCameraIdDiv {
+    width: 430px;
+    margin: 0 auto;
+}
+
+.center > #peopleInfo{
+    text-align: left;
+    position: absolute;
+    top: 60px;
 }
 
 a.remove {
@@ -92,4 +126,9 @@ ul.tabs li.current{
 
 .tab-content.current{
     display: inherit;
+}
+
+#progress_bar {
+	width: 400px;
+    margin: 0 auto;
 }
